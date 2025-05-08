@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from io import StringIO
-import uuid
 
 st.set_page_config(page_title="IMDB 5000 Movie Analytics", layout="wide")
 
@@ -111,10 +110,12 @@ with col2:
 
 with col3:
     try:
-        roi = ((filtered_data['gross'] - filtered_data['budget']) / filtered_data['budget'].replace(0, 1)).mean() * 100
-        st.metric("Средний ROI", f"{roi:.1f}%" if pd.notna(roi) else "Нет данных")
+        # Фильтруем фильмы с бюджетом >= 1000 для исключения аномалий
+        roi_data = filtered_data[filtered_data['budget'] >= 1000]
+        roi = ((roi_data['gross'] - roi_data['budget']) / roi_data['budget']).median() * 100
+        st.metric("Медианный ROI", f"{roi:.1f}%" if pd.notna(roi) else "Нет данных")
     except Exception:
-        st.metric("Средний ROI", "Нет данных")
+        st.metric("Медианный ROI", "Нет данных")
 
 if show_stats and not filtered_data.empty:
     st.subheader("Дополнительная статистика")
