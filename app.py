@@ -15,7 +15,7 @@ def load_data():
             st.error(f"Файл {file_path} не найден!")
             return pd.DataFrame()
         df = pd.read_csv(file_path)
-        # Очистка данных
+
         df['genres'] = df['genres'].fillna('Unknown')
         df['actor_1_name'] = df['actor_1_name'].fillna('Unknown')
         df['actor_2_name'] = df['actor_2_name'].fillna('Unknown')
@@ -110,7 +110,7 @@ with col2:
 
 with col3:
     try:
-        # Фильтруем фильмы с бюджетом >= 1000 для исключения аномалий
+
         roi_data = filtered_data[filtered_data['budget'] >= 1000]
         roi = ((roi_data['gross'] - roi_data['budget']) / roi_data['budget']).median() * 100
         st.metric("Медианный ROI", f"{roi:.1f}%" if pd.notna(roi) else "Нет данных")
