@@ -1,9 +1,35 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import importlib.util
+import subprocess
+import sys
 import os
 from io import StringIO
+
+
+def install_library(library_name):
+    try:
+
+        if importlib.util.find_spec(library_name) is None:
+            st.warning(f"Библиотека {library_name} не найдена. Устанавливаем...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", library_name])
+            st.success(f"Библиотека {library_name} успешно установлена!")
+        else:
+            pass 
+    except Exception as e:
+        st.error(f"Ошибка при установке {library_name}: {str(e)}")
+        st.stop()
+
+
+required_libraries = ["plotly", "pandas", "streamlit"]
+
+
+for lib in required_libraries:
+    install_library(lib)
+
+
+import plotly.express as px
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="IMDB 5000 Movie Analytics", layout="wide")
 
@@ -15,7 +41,7 @@ def load_data():
             st.error(f"Файл {file_path} не найден!")
             return pd.DataFrame()
         df = pd.read_csv(file_path)
-        # Очистка данных
+
         df['genres'] = df['genres'].fillna('Unknown')
         df['actor_1_name'] = df['actor_1_name'].fillna('Unknown')
         df['actor_2_name'] = df['actor_2_name'].fillna('Unknown')
@@ -74,7 +100,7 @@ with st.sidebar:
     search_query = st.text_input("Поиск по названию фильма")
     show_stats = st.checkbox("Показать статистику")
     
-    # Выбор типа графика
+
     plot_type = st.selectbox(
         "Выберите тип графика",
         ["Бюджет vs Сборы (Скаттер)", "Сборы по жанрам (Box)", "Тренды по годам (Линейный)", "Распределение рейтингов (Гистограмма)"]
@@ -229,7 +255,8 @@ if not filtered_data.empty:
         st.plotly_chart(fig, use_container_width=True)
         
     except Exception as e:
-        st.warning(f"Не удалось построить график: {str(e)}")
+        st.error(f"Не удалось построить график: {str(e)}")
+        st.stop()
 
 st.subheader("Результаты поиска")
 if not filtered_data.empty:
