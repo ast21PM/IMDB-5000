@@ -15,7 +15,7 @@ def install_library(library_name):
             subprocess.check_call([sys.executable, "-m", "pip", "install", library_name])
             st.success(f"Библиотека {library_name} успешно установлена!")
         else:
-            pass 
+            pass  
     except Exception as e:
         st.error(f"Ошибка при установке {library_name}: {str(e)}")
         st.stop()
@@ -177,8 +177,8 @@ if not filtered_data.empty:
                 template='plotly_dark'
             )
             fig.update_layout(
-                xaxis_tickformat='$%,.0f',
-                yaxis_tickformat='$%,.0f',
+                xaxis_tickformat='$%,d',
+                yaxis_tickformat='$%,d',
                 showlegend=True,
                 margin=dict(l=50, r=50, t=50, b=50)
             )
@@ -201,7 +201,7 @@ if not filtered_data.empty:
                 color_discrete_sequence=px.colors.qualitative.Set2
             )
             fig.update_layout(
-                yaxis_tickformat='$%,.0f',
+                yaxis_tickformat='$%,d',
                 showlegend=False,
                 margin=dict(l=50, r=50, t=50, b=50)
             )
@@ -231,7 +231,8 @@ if not filtered_data.empty:
                 title="Тренды среднего бюджета и сборов по годам",
                 xaxis_title="Год выпуска",
                 yaxis_title="Сумма ($)",
-                yaxis_tickformat='$%,.0f',
+                xaxis_tickformat='d',
+                yaxis_tickformat='$%,d', 
                 template='plotly_dark',
                 showlegend=True,
                 margin=dict(l=50, r=50, t=50, b=50)
@@ -248,6 +249,8 @@ if not filtered_data.empty:
                 color_discrete_sequence=['teal']
             )
             fig.update_layout(
+                xaxis_tickformat='d',
+                yaxis_tickformat='d', 
                 showlegend=False,
                 margin=dict(l=50, r=50, t=50, b=50)
             )
