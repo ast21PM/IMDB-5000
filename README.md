@@ -16,6 +16,6 @@ imdb-5000
 
 
 Датасет
-Источник: IMDB 5000 Movie Dataset
+Источник: [IMDB 5000 Movie Dataset](https://www.kaggle.com/datasets/carolzhangdc/imdb-5000-movie-dataset?resource=download)
 
 ![Screenshot](screenshot1.png)
