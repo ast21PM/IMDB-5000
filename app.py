@@ -181,9 +181,10 @@ if not filtered_data.empty:
             tickvals_gross = None
             ticktext_gross = None
 
+
         axis_style = dict(
-            titlefont=dict(size=14, color='white'),
-            tickfont=dict(size=12, color='lightblue')
+            title=dict(font=dict(size=14, color='white')), 
+            tickfont=dict(size=12, color='lightblue') 
         )
 
         if plot_type == "Бюджет vs Сборы (Скаттер)":
@@ -244,7 +245,7 @@ if not filtered_data.empty:
                 )
             else:
                 fig.update_layout(
-                    yaxis_tickformat='$d',
+                    yaxis_tickformat='$d', 
                     xaxis=axis_style,
                     yaxis=axis_style,
                     showlegend=False,
