@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 import os
 from io import StringIO
 
@@ -15,7 +15,7 @@ def load_data():
             st.error(f"Файл {file_path} не найден!")
             return pd.DataFrame()
         df = pd.read_csv(file_path)
-
+        # Очистка данных
         df['genres'] = df['genres'].fillna('Unknown')
         df['actor_1_name'] = df['actor_1_name'].fillna('Unknown')
         df['actor_2_name'] = df['actor_2_name'].fillna('Unknown')
@@ -73,6 +73,12 @@ with st.sidebar:
     
     search_query = st.text_input("Поиск по названию фильма")
     show_stats = st.checkbox("Показать статистику")
+    
+    # Выбор типа графика
+    plot_type = st.selectbox(
+        "Выберите тип графика",
+        ["Бюджет vs Сборы (Скаттер)", "Сборы по жанрам (Box)", "Тренды по годам (Линейный)", "Распределение рейтингов (Гистограмма)"]
+    )
 
 try:
     filtered_data = df.copy()
@@ -110,10 +116,12 @@ with col2:
 
 with col3:
     try:
-
-        roi_data = filtered_data[filtered_data['budget'] >= 1000]
-        roi = ((roi_data['gross'] - roi_data['budget']) / roi_data['budget']).median() * 100
-        st.metric("Медианный ROI", f"{roi:.1f}%" if pd.notna(roi) else "Нет данных")
+        roi_data = filtered_data[(filtered_data['budget'] >= 1000) & (filtered_data['gross'] > 0)]
+        if not roi_data.empty:
+            roi = ((roi_data['gross'] - roi_data['budget']) / roi_data['budget']).median() * 100
+            st.metric("Медианный ROI", f"{roi:.1f}%" if pd.notna(roi) else "Нет данных")
+        else:
+            st.metric("Медианный ROI", "Нет данных")
     except Exception:
         st.metric("Медианный ROI", "Нет данных")
 
@@ -124,31 +132,102 @@ if show_stats and not filtered_data.empty:
     st.write(f"**Средний бюджет:** ${filtered_data['budget'].mean():,.0f}")
     st.write(f"**Средние сборы:** ${filtered_data['gross'].mean():,.0f}")
 
-st.subheader("Зависимость бюджета и сборов")
-if not filtered_data.empty and 'budget' in filtered_data.columns and 'gross' in filtered_data.columns:
+st.subheader("Визуализация данных")
+if not filtered_data.empty:
     try:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.scatterplot(data=filtered_data, x='budget', y='gross', hue='imdb_score', size='imdb_score', ax=ax)
-        ax.set_title("Бюджет vs Сборы (цвет и размер — рейтинг IMDB)", fontsize=16)
-        ax.set_xlabel("Бюджет ($)", fontsize=12)
-        ax.set_ylabel("Сборы ($)", fontsize=12)
-        ax.grid(True, linestyle='--', alpha=0.7)
-        plt.tight_layout()
-        st.pyplot(fig)
-    except Exception as e:
-        st.warning(f"Не удалось построить график: {str(e)}")
+        if plot_type == "Бюджет vs Сборы (Скаттер)":
+            fig = px.scatter(
+                filtered_data,
+                x='budget',
+                y='gross',
+                color='imdb_score',
+                size='imdb_score',
+                hover_data=['movie_title', 'budget', 'gross', 'imdb_score'],
+                log_x=True,
+                log_y=True,
+                title="Бюджет vs Сборы (цвет и размер — рейтинг IMDB)",
+                labels={'budget': 'Бюджет ($)', 'gross': 'Сборы ($)', 'imdb_score': 'IMDB Score'},
+                color_continuous_scale='Viridis',
+                template='plotly_dark'
+            )
+            fig.update_layout(
+                xaxis_tickformat='$%,.0f',
+                yaxis_tickformat='$%,.0f',
+                showlegend=True,
+                margin=dict(l=50, r=50, t=50, b=50)
+            )
 
-st.subheader("Распределение рейтингов IMDB")
-if not filtered_data.empty and 'imdb_score' in filtered_data.columns:
-    try:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.histplot(data=filtered_data, x='imdb_score', bins=20, kde=True, color='teal', ax=ax)
-        ax.set_title("Распределение рейтингов IMDB", fontsize=16)
-        ax.set_xlabel("Рейтинг IMDB", fontsize=12)
-        ax.set_ylabel("Количество фильмов", fontsize=12)
-        ax.grid(True, linestyle='--', alpha=0.7)
-        plt.tight_layout()
-        st.pyplot(fig)
+        elif plot_type == "Сборы по жанрам (Box)":
+            genre_data = filtered_data[['gross', 'genres']].copy()
+            genre_data['genres'] = genre_data['genres'].str.split('|')
+            genre_data = genre_data.explode('genres')
+            top_genres = genre_data['genres'].value_counts().head(10).index
+            genre_data = genre_data[genre_data['genres'].isin(top_genres)]
+            
+            fig = px.box(
+                genre_data,
+                x='genres',
+                y='gross',
+                title="Распределение сборов по жанрам (Топ-10)",
+                labels={'genres': 'Жанр', 'gross': 'Сборы ($)'},
+                template='plotly_dark',
+                color='genres',
+                color_discrete_sequence=px.colors.qualitative.Set2
+            )
+            fig.update_layout(
+                yaxis_tickformat='$%,.0f',
+                showlegend=False,
+                margin=dict(l=50, r=50, t=50, b=50)
+            )
+
+        elif plot_type == "Тренды по годам (Линейный)":
+            yearly_data = filtered_data.groupby('title_year')[['budget', 'gross']].mean().reset_index()
+            yearly_data = yearly_data[yearly_data['title_year'] > 0]
+            
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=yearly_data['title_year'],
+                    y=yearly_data['budget'],
+                    name='Средний бюджет',
+                    line=dict(color='blue')
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=yearly_data['title_year'],
+                    y=yearly_data['gross'],
+                    name='Средние сборы',
+                    line=dict(color='orange')
+                )
+            )
+            fig.update_layout(
+                title="Тренды среднего бюджета и сборов по годам",
+                xaxis_title="Год выпуска",
+                yaxis_title="Сумма ($)",
+                yaxis_tickformat='$%,.0f',
+                template='plotly_dark',
+                showlegend=True,
+                margin=dict(l=50, r=50, t=50, b=50)
+            )
+
+        elif plot_type == "Распределение рейтингов (Гистограмма)":
+            fig = px.histogram(
+                filtered_data,
+                x='imdb_score',
+                nbins=20,
+                title="Распределение рейтингов IMDB",
+                labels={'imdb_score': 'Рейтинг IMDB', 'count': 'Количество фильмов'},
+                template='plotly_dark',
+                color_discrete_sequence=['teal']
+            )
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(l=50, r=50, t=50, b=50)
+            )
+
+        st.plotly_chart(fig, use_container_width=True)
+        
     except Exception as e:
         st.warning(f"Не удалось построить график: {str(e)}")
 
