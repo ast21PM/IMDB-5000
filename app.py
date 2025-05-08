@@ -15,7 +15,7 @@ def install_library(library_name):
             subprocess.check_call([sys.executable, "-m", "pip", "install", library_name])
             st.success(f"Библиотека {library_name} успешно установлена!")
         else:
-            pass  
+            pass 
     except Exception as e:
         st.error(f"Ошибка при установке {library_name}: {str(e)}")
         st.stop()
@@ -105,6 +105,12 @@ with st.sidebar:
         "Выберите тип графика",
         ["Бюджет vs Сборы (Скаттер)", "Сборы по жанрам (Box)", "Тренды по годам (Линейный)", "Распределение рейтингов (Гистограмма)"]
     )
+    
+
+    number_format = st.selectbox(
+        "Формат чисел для бюджета и сборов",
+        ["Короткий ($100M)", "Длинный ($100000000)"]
+    )
 
 try:
     filtered_data = df.copy()
@@ -161,6 +167,25 @@ if show_stats and not filtered_data.empty:
 st.subheader("Визуализация данных")
 if not filtered_data.empty:
     try:
+
+        if number_format == "Короткий ($100M)":
+
+            tickvals_budget = [0, 50000000, 100000000, 150000000, 200000000, 250000000, 300000000]
+            ticktext_budget = ['$0', '$50M', '$100M', '$150M', '$200M', '$250M', '$300M']
+            tickvals_gross = [0, 100000000, 200000000, 300000000, 400000000, 500000000, 600000000]
+            ticktext_gross = ['$0', '$100M', '$200M', '$300M', '$400M', '$500M', '$600M']
+        else:
+
+            tickvals_budget = None
+            ticktext_budget = None
+            tickvals_gross = None
+            ticktext_gross = None
+
+        axis_style = dict(
+            titlefont=dict(size=14, color='white'),
+            tickfont=dict(size=12, color='lightblue')
+        )
+
         if plot_type == "Бюджет vs Сборы (Скаттер)":
             fig = px.scatter(
                 filtered_data,
@@ -176,12 +201,22 @@ if not filtered_data.empty:
                 color_continuous_scale='Viridis',
                 template='plotly_dark'
             )
-            fig.update_layout(
-                xaxis_tickformat='$%,d',
-                yaxis_tickformat='$%,d',
-                showlegend=True,
-                margin=dict(l=50, r=50, t=50, b=50)
-            )
+            if number_format == "Короткий ($100M)":
+                fig.update_layout(
+                    xaxis=dict(tickvals=tickvals_budget, ticktext=ticktext_budget, **axis_style),
+                    yaxis=dict(tickvals=tickvals_gross, ticktext=ticktext_gross, **axis_style),
+                    showlegend=True,
+                    margin=dict(l=50, r=50, t=50, b=50)
+                )
+            else:
+                fig.update_layout(
+                    xaxis_tickformat='$d',
+                    yaxis_tickformat='$d',
+                    xaxis=axis_style,
+                    yaxis=axis_style,
+                    showlegend=True,
+                    margin=dict(l=50, r=50, t=50, b=50)
+                )
 
         elif plot_type == "Сборы по жанрам (Box)":
             genre_data = filtered_data[['gross', 'genres']].copy()
@@ -200,11 +235,21 @@ if not filtered_data.empty:
                 color='genres',
                 color_discrete_sequence=px.colors.qualitative.Set2
             )
-            fig.update_layout(
-                yaxis_tickformat='$%,d',
-                showlegend=False,
-                margin=dict(l=50, r=50, t=50, b=50)
-            )
+            if number_format == "Короткий ($100M)":
+                fig.update_layout(
+                    yaxis=dict(tickvals=tickvals_gross, ticktext=ticktext_gross, **axis_style),
+                    xaxis=axis_style,
+                    showlegend=False,
+                    margin=dict(l=50, r=50, t=50, b=50)
+                )
+            else:
+                fig.update_layout(
+                    yaxis_tickformat='$d',
+                    xaxis=axis_style,
+                    yaxis=axis_style,
+                    showlegend=False,
+                    margin=dict(l=50, r=50, t=50, b=50)
+                )
 
         elif plot_type == "Тренды по годам (Линейный)":
             yearly_data = filtered_data.groupby('title_year')[['budget', 'gross']].mean().reset_index()
@@ -227,16 +272,28 @@ if not filtered_data.empty:
                     line=dict(color='orange')
                 )
             )
-            fig.update_layout(
-                title="Тренды среднего бюджета и сборов по годам",
-                xaxis_title="Год выпуска",
-                yaxis_title="Сумма ($)",
-                xaxis_tickformat='d',
-                yaxis_tickformat='$%,d', 
-                template='plotly_dark',
-                showlegend=True,
-                margin=dict(l=50, r=50, t=50, b=50)
-            )
+            if number_format == "Короткий ($100M)":
+                fig.update_layout(
+                    title="Тренды среднего бюджета и сборов по годам",
+                    xaxis_title="Год выпуска",
+                    yaxis_title="Сумма ($)",
+                    xaxis=dict(tickformat='d', **axis_style),
+                    yaxis=dict(tickvals=tickvals_gross, ticktext=ticktext_gross, **axis_style),
+                    template='plotly_dark',
+                    showlegend=True,
+                    margin=dict(l=50, r=50, t=50, b=50)
+                )
+            else:
+                fig.update_layout(
+                    title="Тренды среднего бюджета и сборов по годам",
+                    xaxis_title="Год выпуска",
+                    yaxis_title="Сумма ($)",
+                    xaxis=dict(tickformat='d', **axis_style),
+                    yaxis=dict(tickformat='$d', **axis_style),
+                    template='plotly_dark',
+                    showlegend=True,
+                    margin=dict(l=50, r=50, t=50, b=50)
+                )
 
         elif plot_type == "Распределение рейтингов (Гистограмма)":
             fig = px.histogram(
@@ -249,8 +306,8 @@ if not filtered_data.empty:
                 color_discrete_sequence=['teal']
             )
             fig.update_layout(
-                xaxis_tickformat='d',
-                yaxis_tickformat='d', 
+                xaxis=dict(tickformat='d', **axis_style),
+                yaxis=dict(tickformat='d', **axis_style),
                 showlegend=False,
                 margin=dict(l=50, r=50, t=50, b=50)
             )
